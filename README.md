@@ -21,6 +21,9 @@
 6. Go to
  - ``` http://localhost:8888 ```
 
+7. Base tests
+ - ``` php artisan test ```
+
 ## Possible Improvements
 
 - Add proper frontend styling using CSS or a framework (Bootstrap, Tailwind)
