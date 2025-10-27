@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
@@ -11,6 +12,9 @@ use Illuminate\Support\Str;
  * @method static where(string $string, $token)
  */
 class User extends Model {
+
+    use HasFactory;
+
     protected $fillable = [
         'username',
         'phone',
@@ -33,7 +37,8 @@ class User extends Model {
         return $this->hasMany(LuckyHistory::class);
     }
 
-    public function isLinkValid(): bool {
-        return $this->active && now()->lt($this->expires_at);
+    public function isLinkValid(): bool
+    {
+        return $this->active && $this->expires_at->isFuture();
     }
 }

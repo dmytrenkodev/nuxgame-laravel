@@ -2,87 +2,83 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\LuckyHistory;
-use App\Models\User;
+use App\Services\LuckyService;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 
 class LuckyController extends Controller
 {
-    private const WIN_RULES = [
-        ['min' => 901, 'percent' => 0.7],
-        ['min' => 601, 'percent' => 0.5],
-        ['min' => 301, 'percent' => 0.3],
-        ['min' => 0,   'percent' => 0.1],
-    ];
+    protected LuckyService $luckyService;
 
-    private const MAX_LUCKY_NUMBER = 1000;
-
-    public function show($token): Factory|View
+    /**
+     * @param LuckyService $luckyService
+     */
+    public function __construct(LuckyService $luckyService)
     {
-        $user = User::where('token', $token)->firstOrFail();
+        $this->luckyService = $luckyService;
+    }
 
-        if (!$user->isLinkValid()) {
-            abort(403, 'Link expired or deactivated');
-        }
+    /**
+     * @param string $token
+     * @return Factory|View
+     */
+    public function show(string $token): Factory|View
+    {
+        $user = $this->luckyService->findUserAndValidateLink($token);
 
         return view('lucky', compact('user'));
     }
 
-    public function regenerate($token): RedirectResponse
+    /**
+     * @param string $token
+     * @return RedirectResponse
+     */
+    public function regenerate(string $token): RedirectResponse
     {
-        $user = User::where('token', $token)->firstOrFail();
-        $user->token = User::generateToken();
-        $user->expires_at = now()->addDays(7);
-        $user->save();
+        $user = $this->luckyService->findUserAndValidateLink($token);
 
-        return redirect()->route('lucky.page', ['token' => $user->token]);
+        $newToken = $this->luckyService->regenerateToken($user);
+
+        return redirect()->route('lucky.page', ['token' => $newToken]);
     }
 
-    public function deactivate($token): RedirectResponse
+    /**
+     * @param string $token
+     * @return RedirectResponse
+     */
+    public function deactivate(string $token): RedirectResponse
     {
-        $user = User::where('token', $token)->firstOrFail();
-        $user->active = false;
-        $user->save();
+        $user = $this->luckyService->findUserAndValidateLink($token);
+
+        $this->luckyService->deactivateUser($user);
 
         return redirect()->route('register.form')->with('status', 'Link deactivated');
     }
 
-    public function imFeelingLucky($token)
+    /**
+     * @param string $token
+     * @return RedirectResponse
+     */
+    public function imFeelingLucky(string $token): RedirectResponse
     {
-        $user = User::where('token', $token)->firstOrFail();
-        if (!$user->isLinkValid()) abort(403, 'Link expired or deactivated');
+        $user = $this->luckyService->findUserAndValidateLink($token);
 
-        $number = rand(1, self::MAX_LUCKY_NUMBER);
-        $result = $number % 2 === 0 ? 'Win' : 'Lose';
-
-        $win_amount = 0;
-
-        if ($result === 'Win') {
-            foreach (self::WIN_RULES as $rule) {
-                if ($number >= $rule['min']) {
-                    $win_amount = $number * $rule['percent'];
-                    break;
-                }
-            }
-        }
-
-        LuckyHistory::create([
-            'user_id' => $user->id,
-            'number' => $number,
-            'result' => $result,
-            'win_amount' => $win_amount,
-        ]);
+        $resultData = $this->luckyService->executeLuckyDraw($user);
 
         return redirect()->route('lucky.page', ['token' => $user->token])
-            ->with('lucky', compact('number', 'result', 'win_amount'));
+            ->with('lucky', $resultData);
     }
 
-    public function history($token): Factory|View
+    /**
+     * @param string $token
+     * @return Factory|View
+     */
+    public function history(string $token): Factory|View
     {
-        $user = User::where('token', $token)->firstOrFail();
-        $histories = $user->histories()->latest()->take(3)->get();
+        $user = $this->luckyService->findUserAndValidateLink($token);
+
+        $histories = $this->luckyService->getHistory($user, 3);
 
         return view('history', compact('user', 'histories'));
     }
