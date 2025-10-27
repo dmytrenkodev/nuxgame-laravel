@@ -1,13 +1,13 @@
-# NuxGame Laravel Test Task
+# NuxGame Laravel Task
 
 ## Running
 
 1. Clone repository
 
- - ``` git clone https://github.com/dmytrenkodev/nuxgame-laravel-test.git ```
+ - ``` git clone https://github.com/dmytrenkodev/nuxgame-laravel.git ```
 
 2. Go to 
- - ``` cd nuxgame-laravel-test ```
+ - ``` cd nuxgame-laravel ```
 
 3. From root directory
  - ``` docker compose up -d --build ```
@@ -19,7 +19,7 @@
  - ``` php artisan migrate ```
 
 6. Go to
- - ``` http://localhost:8888 ```
+ - ``` http://localhost/ ```
 
 7. Base tests
  - ``` php artisan test ```
